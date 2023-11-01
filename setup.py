@@ -24,16 +24,14 @@ version = get_version(filename="src/gym_duckietown/__init__.py")
 line = "daffy"
 
 install_requires = [
-    "gym>=0.17.1",
-    "numpy>=1.10.0,<=1.20.0",
-    "pyglet",
-    # 'pyglet',
-    "pyzmq>=16.0.0",
-    "opencv-python>=3.4",
-    "PyYAML>=3.11",
-    f"duckietown-world-{line}",
+    "gym",
+    "numpy",
+    "pyglet==1.5",
+    "pyzmq",
+    "opencv-python",
+    "PyYAML",
     "PyGeometry-z6",
-    "carnivalmirror==0.6.2",
+    "carnivalmirror",
     "zuper-commons-z6",
     "typing_extensions",
     "Pillow",
