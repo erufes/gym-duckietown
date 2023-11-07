@@ -105,7 +105,7 @@ DEFAULT_CAMERA_WIDTH = 640
 DEFAULT_CAMERA_HEIGHT = 480
 
 # Blue sky horizon color
-BLUE_SKY = np.array([0.45, 0.82, 1])
+BLUE_SKY = [0.45, 0.82, 1]
 
 # Color meant to approximate interior walls
 WALL_COLOR = np.array([0.64, 0.71, 0.28])
@@ -168,7 +168,7 @@ DEFAULT_MAX_STEPS = 1500
 
 DEFAULT_MAP_NAME = "udem1"
 
-DEFAULT_FRAME_SKIP = 1
+DEFAULT_FRAME_SKIP = True
 
 DEFAULT_ACCEPT_START_ANGLE_DEG = 60
 
@@ -201,7 +201,7 @@ class Simulator(gym.Env):
     grid_height: int
     step_count: int
     timestamp: float
-    np_random: RandomState
+    np_random: np.random.Generator
     grid: List[TileDict]
 
     def __init__(
@@ -219,7 +219,7 @@ class Simulator(gym.Env):
         accept_start_angle_deg=DEFAULT_ACCEPT_START_ANGLE_DEG,
         full_transparency: bool = False,
         user_tile_start=None,
-        seed: int = None,
+        seed: int | None = None,
         distortion: bool = False,
         dynamics_rand: bool = False,
         camera_rand: bool = False,
@@ -1339,8 +1339,8 @@ class Simulator(gym.Env):
         return pts
 
     def closest_curve_point(
-        self, pos: np.array, angle: float
-    ) -> Tuple[Optional[np.array], Optional[np.array]]:
+        self, pos: np.ndarray, angle: float
+    ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         """
         Get the closest point on the curve to a given point
         Also returns the tangent at that point.
@@ -1552,7 +1552,7 @@ class Simulator(gym.Env):
     cur_angle: float
     speed: float
 
-    def update_physics(self, action, delta_time: float = None):
+    def update_physics(self, action, delta_time: float | None = None):
         # print("updating physics")
         if delta_time is None:
             delta_time = self.delta_time
