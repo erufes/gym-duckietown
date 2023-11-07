@@ -6,23 +6,23 @@ from dataclasses import dataclass
 
 import sys
 
+import gymnasium as gym
+from gym.utils import seeding
+
 if sys.version_info >= (3, 8):
     from typing import TypedDict
 else:
     from typing_extensions import TypedDict
 
-from typing import Any, cast, Dict, List, NewType, Optional, Sequence, Tuple, Union
+from typing import Any, cast, Dict, List, NewType, Optional, Sequence, Tuple, Union, SupportsFloat
 
 import geometry
 import geometry as g
-import gym
 import math
 import numpy as np
 import pyglet
 import yaml
 from geometry import SE2value
-from gym import spaces
-from gym.utils import seeding
 from numpy.random.mtrand import RandomState
 from pyglet import gl, image, window
 
@@ -192,7 +192,7 @@ class Simulator(gym.Env):
     basic differential-drive dynamics.
     """
 
-    metadata = {"render.modes": ["human", "rgb_array", "app"], "video.frames_per_second": 30}
+    metadata = {"render_modes": ["human", "rgb_array", "app"], "video.frames_per_second": 30}
 
     cur_pos: np.ndarray
     cam_offset: np.ndarray
@@ -306,7 +306,7 @@ class Simulator(gym.Env):
         self.graphics = True
 
         # Two-tuple of wheel torques, each in the range [-1, 1]
-        self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32)
+        self.action_space = gym.spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32)
 
         self.camera_width = camera_width
         self.camera_height = camera_height
@@ -315,7 +315,7 @@ class Simulator(gym.Env):
         # We observe an RGB image with pixels in [0, 255]
         # Note: the pixels are in uint8 format because this is more compact
         # than float32 if sent over the network or stored in a dataset
-        self.observation_space = spaces.Box(
+        self.observation_space = gym.spaces.Box(
             low=0, high=255, shape=(self.camera_height, self.camera_width, 3), dtype=np.uint8
         )
 
@@ -525,11 +525,13 @@ class Simulator(gym.Env):
         ]
         self.ground_vlist = pyglet.graphics.vertex_list(4, ("v3f", verts))
 
-    def reset(self, segment: bool = False):
+    def reset(self, segment: bool = False, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[np.ndarray, dict[str, Any]]:
         """
         Reset the simulation at the start of a new episode
         This also randomizes many environment parameters (domain randomization)
         """
+
+        # TODO: Actually implement options
 
         # Step count since episode start
         self.step_count = 0
@@ -537,6 +539,8 @@ class Simulator(gym.Env):
 
         # Robot's current speed
         self.speed = 0.0
+
+        self.seed(seed)
 
         if self.randomize_maps_on_reset:
             map_name = self.np_random.choice(self.map_names)
@@ -760,7 +764,7 @@ class Simulator(gym.Env):
         obs = self.render_obs(segment=segment)
 
         # Return first observation
-        return obs
+        return obs, {}
 
     def _load_map(self, map_name: str):
         """
@@ -1666,7 +1670,7 @@ class Simulator(gym.Env):
             reward = +1.0 * speed * lp.dot_dir + -10 * np.abs(lp.dist) + +40 * col_penalty
         return reward
 
-    def step(self, action: np.ndarray):
+    def step(self, action: np.ndarray) -> tuple[np.ndarray, SupportsFloat, bool, bool, dict[str, Any]]:
         action = np.clip(action, -1, 1)
         # Actions could be a Python list
         action = np.array(action)
@@ -1680,7 +1684,7 @@ class Simulator(gym.Env):
         d = self._compute_done_reward()
         misc["Simulator"]["msg"] = d.done_why
 
-        return obs, d.reward, d.done, misc
+        return obs, d.reward, d.done, d.done, misc
 
     def _compute_done_reward(self) -> DoneRewardInfo:
         # If the agent is not in a valid pose (on drivable tiles)
