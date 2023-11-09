@@ -22,7 +22,7 @@ else:
 path = os.path.dirname(os.path.dirname(__file__))
 logger.debug(f"gym-duckietown version {__version__} path {path}\n")
 
-from gym.envs.registration import register
+from gymnasium.envs.registration import register
 
 from .utils import get_subdir_path
 
@@ -45,6 +45,14 @@ for map_name, filename in list_maps2().items():
     if "regress" not in filename:
         reg_map_env(map_name, filename)
 
-register(id="MultiMap-v0", entry_point="gym_duckietown.envs:MultiMapEnv", reward_threshold=400.0)
+register(
+    id="MultiMap-v0",
+    entry_point="gym_duckietown.envs:MultiMapEnv",
+    reward_threshold=400.0,
+)
 
-register(id="Duckiebot-v0", entry_point="gym_duckietown.envs:DuckiebotEnv", reward_threshold=400.0)
+register(
+    id="Duckiebot-v0",
+    entry_point="gym_duckietown.envs:DuckiebotEnv",
+    reward_threshold=400.0,
+)

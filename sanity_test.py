@@ -5,9 +5,9 @@ from stable_baselines3 import TD3
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecFrameStack
-import gymnasium as gym
+import gymnasium
+from gymnasium.wrappers.frame_stack import FrameStack
 
-from gym.wrappers.resize_observation import ResizeObservation
 import numpy as np
 
 MODEL_PREFIX = "td3"
@@ -22,8 +22,10 @@ ckpt_callback = CheckpointCallback(
 )
 
 # env = VecFrameStack(make_vec_env(launch_env, 1), 4)
-env = gym.make("Duckietown-udem1-v0")
+env = gymnasium.make("Duckietown-udem1-v0")
 
+env = FrameStack(env, 4)
+exit(1)
 model = TD3(
     policy="CnnPolicy",
     env=env,
