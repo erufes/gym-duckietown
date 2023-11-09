@@ -1,20 +1,23 @@
 import itertools
 import os
-from collections import namedtuple
 from ctypes import POINTER
-from dataclasses import dataclass
 
-import sys
 
 import gymnasium as gym
-from gym.utils import seeding
+import gymnasium
+from gymnasium.utils import seeding
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-
-from typing import Any, cast, Dict, List, NewType, Optional, Sequence, Tuple, Union, SupportsFloat
+from typing import (
+    Any,
+    cast,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    SupportsFloat,
+)
 
 import geometry
 import geometry as g
@@ -23,7 +26,6 @@ import numpy as np
 import pyglet
 import yaml
 from geometry import SE2value
-from numpy.random.mtrand import RandomState
 from pyglet import gl, image, window
 
 from duckietown_world import (
@@ -98,15 +100,17 @@ from .simulator_constants import (
 from .simulator_types import TileDict, DoneRewardInfo, DynamicsInfo, LanePosition
 
 
-
-class Simulator(gym.Env):
+class SimulatorStacked(gym.Env):
     """
     Simple road simulator to test RL training.
     Draws a road with turns using OpenGL, and simulates
     basic differential-drive dynamics.
     """
 
-    metadata = {"render_modes": ["human", "rgb_array", "app"], "video.frames_per_second": 30}
+    metadata = {
+        "render_modes": ["human", "rgb_array", "app"],
+        "video.frames_per_second": 30,
+    }
 
     cur_pos: np.ndarray
     cam_offset: np.ndarray
@@ -220,7 +224,7 @@ class Simulator(gym.Env):
         self.graphics = True
 
         # Two-tuple of wheel torques, each in the range [-1, 1]
-        self.action_space = gym.spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32)
+        self.action_space = gymnasium.spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32)
 
         self.camera_width = camera_width
         self.camera_height = camera_height
@@ -229,8 +233,11 @@ class Simulator(gym.Env):
         # We observe an RGB image with pixels in [0, 255]
         # Note: the pixels are in uint8 format because this is more compact
         # than float32 if sent over the network or stored in a dataset
-        self.observation_space = gym.spaces.Box(
-            low=0, high=255, shape=(self.camera_height, self.camera_width, 3), dtype=np.uint8
+        self.observation_space = gymnasium.spaces.Box(
+            low=0,
+            high=255,
+            shape=(self.camera_height, self.camera_width, 3),
+            dtype=np.uint8,
         )
 
         self.reward_range = (-1000, 1000)
@@ -242,19 +249,27 @@ class Simulator(gym.Env):
         self.shadow_window = pyglet.window.Window(width=1, height=1, visible=False)
 
         # For displaying text
-        self.text_label = pyglet.text.Label(font_name="Arial", font_size=14, x=5, y=WINDOW_HEIGHT - 19)
+        self.text_label = pyglet.text.Label(
+            font_name="Arial", font_size=14, x=5, y=WINDOW_HEIGHT - 19
+        )
 
         # Create a frame buffer object for the observation
-        self.multi_fbo, self.final_fbo = create_frame_buffers(self.camera_width, self.camera_height, 4)
+        self.multi_fbo, self.final_fbo = create_frame_buffers(
+            self.camera_width, self.camera_height, 4
+        )
 
         # Array to render the image into (for observation rendering)
         self.img_array = np.zeros(shape=self.observation_space.shape, dtype=np.uint8)
 
         # Create a frame buffer object for human rendering
-        self.multi_fbo_human, self.final_fbo_human = create_frame_buffers(WINDOW_WIDTH, WINDOW_HEIGHT, 4)
+        self.multi_fbo_human, self.final_fbo_human = create_frame_buffers(
+            WINDOW_WIDTH, WINDOW_HEIGHT, 4
+        )
 
         # Array to render the image into (for human rendering)
-        self.img_array_human = np.zeros(shape=(WINDOW_HEIGHT, WINDOW_WIDTH, 3), dtype=np.uint8)
+        self.img_array_human = np.zeros(
+            shape=(WINDOW_HEIGHT, WINDOW_WIDTH, 3), dtype=np.uint8
+        )
 
         # allowed angle in lane for starting position
         self.accept_start_angle_deg = accept_start_angle_deg
@@ -287,9 +302,13 @@ class Simulator(gym.Env):
         if self.randomize_maps_on_reset:
             self.map_names = os.listdir(get_subdir_path("maps"))
             self.map_names = [
-                _map for _map in self.map_names if not _map.startswith(("calibration", "regress"))
+                _map
+                for _map in self.map_names
+                if not _map.startswith(("calibration", "regress"))
             ]
-            self.map_names = [mapfile.replace(".yaml", "") for mapfile in self.map_names]
+            self.map_names = [
+                mapfile.replace(".yaml", "") for mapfile in self.map_names
+            ]
 
         # Initialize the state
         self.reset()
@@ -298,7 +317,6 @@ class Simulator(gym.Env):
         self.wheelVels = np.array([0, 0])
 
     def _init_vlists(self):
-
         ns = 8
         assert ns >= 2
 
@@ -417,7 +435,11 @@ class Simulator(gym.Env):
         #             normals=normals)
         total = len(vertices) // 3
         self.road_vlist = pyglet.graphics.vertex_list(
-            total, ("v3f", vertices), ("t2f", textures), ("n3f", normals), ("c4B", colors)
+            total,
+            ("v3f", vertices),
+            ("t2f", textures),
+            ("n3f", normals),
+            ("c4B", colors),
         )
         logger.info("done")
         # Create the vertex list for the ground quad
@@ -439,7 +461,12 @@ class Simulator(gym.Env):
         ]
         self.ground_vlist = pyglet.graphics.vertex_list(4, ("v3f", verts))
 
-    def reset(self, segment: bool = False, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[np.ndarray, dict[str, Any]]:
+    def reset(
+        self,
+        segment: bool = False,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         """
         Reset the simulation at the start of a new episode
         This also randomizes many environment parameters (domain randomization)
@@ -528,7 +555,11 @@ class Simulator(gym.Env):
         # Perturb using randomization API (either if domain rand or only camera rand
         if self.domain_rand or self.camera_rand:
             self.cam_height *= self.randomization_settings["camera_height"]
-            self.cam_angle = [CAMERA_ANGLE * self.randomization_settings["camera_angle"], 0, 0]
+            self.cam_angle = [
+                CAMERA_ANGLE * self.randomization_settings["camera_angle"],
+                0,
+                0,
+            ]
             self.cam_fov_y *= self.randomization_settings["camera_fov_y"]
 
         # Camera offset for use in free camera mode
@@ -540,13 +571,17 @@ class Simulator(gym.Env):
         verts = []
         colors = []
         for _ in range(0, 3 * numTris):
-            p = self.np_random.uniform(low=[-20, -0.6, -20], high=[20, -0.3, 20], size=(3,))
+            p = self.np_random.uniform(
+                low=[-20, -0.6, -20], high=[20, -0.3, 20], size=(3,)
+            )
             c = self.np_random.uniform(low=0, high=0.9)
             c = self._perturb([c, c, c], 0.1)
             verts += [p[0], p[1], p[2]]
             colors += [c[0], c[1], c[2]]
 
-        self.tri_vlist = pyglet.graphics.vertex_list(3 * numTris, ("v3f", verts), ("c3f", colors))
+        self.tri_vlist = pyglet.graphics.vertex_list(
+            3 * numTris, ("v3f", verts), ("c3f", colors)
+        )
 
         # Randomize tile parameters
         for tile in self.grid:
@@ -603,7 +638,9 @@ class Simulator(gym.Env):
             propose_pos = np.array([x, 0, z])
             propose_angle = self.start_pose[1]
 
-            logger.info(f"Using map pose start. \n Pose: {propose_pos}, Angle: {propose_angle}")
+            logger.info(
+                f"Using map pose start. \n Pose: {propose_pos}, Angle: {propose_angle}"
+            )
 
         else:
             # Keep trying to find a valid spawn position on this tile
@@ -630,7 +667,9 @@ class Simulator(gym.Env):
                     # logger.warning(msg)
                     continue
 
-                invalid = not self._valid_pose(propose_pos, propose_angle, safety_factor=1.3)
+                invalid = not self._valid_pose(
+                    propose_pos, propose_angle, safety_factor=1.3
+                )
                 if invalid:
                     # msg = 'The spawn was invalid.'
                     # logger.warning(msg)
@@ -726,7 +765,6 @@ class Simulator(gym.Env):
 
             # For each row in the grid
             for j, row in enumerate(tiles):
-
                 if len(row) != self.grid_width:
                     msg = "each row of tiles must have the same length"
                     raise InvalidMapException(msg, row=row)
@@ -768,7 +806,13 @@ class Simulator(gym.Env):
                     # logger.info(f'kind {kind} drivable {drivable} row = {row}')
 
                     tile = cast(
-                        TileDict, {"coords": (i, j), "kind": kind, "angle": angle, "drivable": drivable}
+                        TileDict,
+                        {
+                            "coords": (i, j),
+                            "kind": kind,
+                            "angle": angle,
+                            "drivable": drivable,
+                        },
                     )
 
                     self._set_tile(i, j, tile)
@@ -898,7 +942,9 @@ class Simulator(gym.Env):
                 scale = desc["scale"]
             else:
                 scale = 1.0
-        assert not ("height" in desc and "scale" in desc), "cannot specify both height and scale"
+        assert not (
+            "height" in desc and "scale" in desc
+        ), "cannot specify both height and scale"
 
         static = desc.get("static", True)
         # static = desc.get('static', False)
@@ -922,12 +968,21 @@ class Simulator(gym.Env):
         else:
             if kind == MF1C.KIND_DUCKIEBOT:
                 obj = DuckiebotObj(
-                    obj_desc, self.domain_rand, SAFETY_RAD_MULT, WHEEL_DIST, ROBOT_WIDTH, ROBOT_LENGTH
+                    obj_desc,
+                    self.domain_rand,
+                    SAFETY_RAD_MULT,
+                    WHEEL_DIST,
+                    ROBOT_WIDTH,
+                    ROBOT_LENGTH,
                 )
             elif kind == MF1C.KIND_DUCKIE:
-                obj = DuckieObj(obj_desc, self.domain_rand, SAFETY_RAD_MULT, self.road_tile_size)
+                obj = DuckieObj(
+                    obj_desc, self.domain_rand, SAFETY_RAD_MULT, self.road_tile_size
+                )
             elif kind == MF1C.KIND_CHECKERBOARD:
-                obj = CheckerboardObj(obj_desc, self.domain_rand, SAFETY_RAD_MULT, self.road_tile_size)
+                obj = CheckerboardObj(
+                    obj_desc, self.domain_rand, SAFETY_RAD_MULT, self.road_tile_size
+                )
             else:
                 msg = "Object kind unknown."
                 raise InvalidMapException(msg, kind=kind)
@@ -949,11 +1004,15 @@ class Simulator(gym.Env):
             # # and self._collidable_object(obj.obj_corners, obj.obj_norm, possible_tiles)
         ):
             # noinspection PyUnresolvedReferences
-            self.collidable_centers.append(pos)  # XXX: changes types during initialization
+            self.collidable_centers.append(
+                pos
+            )  # XXX: changes types during initialization
             self.collidable_corners.append(obj.obj_corners.T)
             self.collidable_norms.append(obj.obj_norm)
             # noinspection PyUnresolvedReferences
-            self.collidable_safety_radii.append(obj.safety_radius)  # XXX: changes types during initialization
+            self.collidable_safety_radii.append(
+                obj.safety_radius
+            )  # XXX: changes types during initialization
 
     def close(self):
         pass
@@ -980,7 +1039,9 @@ class Simulator(gym.Env):
             return None
         return self.grid[j * self.grid_width + i]
 
-    def _perturb(self, val: Union[float, np.ndarray, List[float]], scale: float = 0.1) -> np.ndarray:
+    def _perturb(
+        self, val: Union[float, np.ndarray, List[float]], scale: float = 0.1
+    ) -> np.ndarray:
         """
         Add noise to a value. This is used for domain randomization.
         """
@@ -992,7 +1053,9 @@ class Simulator(gym.Env):
             return val
 
         if isinstance(val, np.ndarray):
-            noise = self.np_random.uniform(low=1 - scale, high=1 + scale, size=val.shape)
+            noise = self.np_random.uniform(
+                low=1 - scale, high=1 + scale, size=val.shape
+            )
             if val.size == 4:
                 noise[3] = 1
         else:
@@ -1033,7 +1096,9 @@ class Simulator(gym.Env):
         # Find the corners for each candidate tile
         drivable_tiles = np.array(
             [
-                tile_corners(self._get_tile(pt[0], pt[1])["coords"], self.road_tile_size).T
+                tile_corners(
+                    self._get_tile(pt[0], pt[1])["coords"], self.road_tile_size
+                ).T
                 for pt in drivable_tiles
             ]
         )
@@ -1227,7 +1292,13 @@ class Simulator(gym.Env):
             for rot in np.arange(0, 4):
                 mat = gen_rot_matrix(np.array([0, 1, 0]), rot * math.pi / 2)
                 pts_new = np.matmul(pts, mat)
-                pts_new += np.array([(i + 0.5) * self.road_tile_size, 0, (j + 0.5) * self.road_tile_size])
+                pts_new += np.array(
+                    [
+                        (i + 0.5) * self.road_tile_size,
+                        0,
+                        (j + 0.5) * self.road_tile_size,
+                    ]
+                )
                 fourway_pts.append(pts_new)
 
             fourway_pts = np.reshape(np.array(fourway_pts), (12, 4, 3))
@@ -1238,7 +1309,9 @@ class Simulator(gym.Env):
             threeway_pts = []
             mat = gen_rot_matrix(np.array([0, 1, 0]), angle * math.pi / 2)
             pts_new = np.matmul(pts, mat)
-            pts_new += np.array([(i + 0.5) * self.road_tile_size, 0, (j + 0.5) * self.road_tile_size])
+            pts_new += np.array(
+                [(i + 0.5) * self.road_tile_size, 0, (j + 0.5) * self.road_tile_size]
+            )
             threeway_pts.append(pts_new)
 
             threeway_pts = np.array(threeway_pts)
@@ -1248,7 +1321,9 @@ class Simulator(gym.Env):
         else:
             mat = gen_rot_matrix(np.array([0, 1, 0]), angle * math.pi / 2)
             pts = np.matmul(pts, mat)
-            pts += np.array([(i + 0.5) * self.road_tile_size, 0, (j + 0.5) * self.road_tile_size])
+            pts += np.array(
+                [(i + 0.5) * self.road_tile_size, 0, (j + 0.5) * self.road_tile_size]
+            )
 
         return pts
 
@@ -1324,7 +1399,9 @@ class Simulator(gym.Env):
         angle_deg = np.rad2deg(angle_rad)
         # return signedDist, dotDir, angle_deg
 
-        return LanePosition(dist=signedDist, dot_dir=dotDir, angle_deg=angle_deg, angle_rad=angle_rad)
+        return LanePosition(
+            dist=signedDist, dot_dir=dotDir, angle_deg=angle_deg, angle_rad=angle_rad
+        )
 
     def _drivable_pos(self, pos) -> bool:
         """
@@ -1364,10 +1441,14 @@ class Simulator(gym.Env):
         else:
             d = np.linalg.norm(self.collidable_centers - pos, axis=1)
 
-            if not safety_circle_intersection(d, AGENT_SAFETY_RAD, self.collidable_safety_radii):
+            if not safety_circle_intersection(
+                d, AGENT_SAFETY_RAD, self.collidable_safety_radii
+            ):
                 static_dist = 0.0
             else:
-                static_dist = safety_circle_overlap(d, AGENT_SAFETY_RAD, self.collidable_safety_radii)
+                static_dist = safety_circle_overlap(
+                    d, AGENT_SAFETY_RAD, self.collidable_safety_radii
+                )
 
         total_safety_pen = static_dist
         for obj in self.objects:
@@ -1382,7 +1463,8 @@ class Simulator(gym.Env):
         """
 
         results = [
-            np.linalg.norm(x.pos - pos) < max(x.max_coords) * 0.5 * x.scale + MIN_SPAWN_OBJ_DIST
+            np.linalg.norm(x.pos - pos)
+            < max(x.max_coords) * 0.5 * x.scale + MIN_SPAWN_OBJ_DIST
             for x in self.objects
             if x.visible
         ]
@@ -1397,7 +1479,12 @@ class Simulator(gym.Env):
 
         # Check collisions with Static Objects
         if len(self.collidable_corners) > 0:
-            collision = intersects(agent_corners, self.collidable_corners, agent_norm, self.collidable_norms)
+            collision = intersects(
+                agent_corners,
+                self.collidable_corners,
+                agent_norm,
+                self.collidable_norms,
+            )
             if collision:
                 return True
 
@@ -1409,7 +1496,9 @@ class Simulator(gym.Env):
         # No collision with any object
         return False
 
-    def _valid_pose(self, pos: g.T3value, angle: float, safety_factor: float = 1.0) -> bool:
+    def _valid_pose(
+        self, pos: g.T3value, angle: float, safety_factor: float = 1.0
+    ) -> bool:
         """
         Check that the agent is in a valid pose
 
@@ -1442,7 +1531,9 @@ class Simulator(gym.Env):
         res = no_collision and all_drivable
 
         if not res:
-            logger.debug(f"Invalid pose. Collision free: {no_collision} On drivable area: {all_drivable}")
+            logger.debug(
+                f"Invalid pose. Collision free: {no_collision} On drivable area: {all_drivable}"
+            )
             logger.debug(f"safety_factor: {safety_factor}")
             logger.debug(f"pos: {pos}")
             logger.debug(f"l_pos: {l_pos}")
@@ -1451,13 +1542,20 @@ class Simulator(gym.Env):
 
         return res
 
-    def _check_intersection_static_obstacles(self, pos: g.T3value, angle: float) -> bool:
+    def _check_intersection_static_obstacles(
+        self, pos: g.T3value, angle: float
+    ) -> bool:
         agent_corners = get_agent_corners(pos, angle)
         agent_norm = generate_norm(agent_corners)
         # logger.debug(agent_corners=agent_corners, agent_norm=agent_norm)
         # Check collisions with Static Objects
         if len(self.collidable_corners) > 0:
-            collision = intersects(agent_corners, self.collidable_corners, agent_norm, self.collidable_norms)
+            collision = intersects(
+                agent_corners,
+                self.collidable_corners,
+                agent_norm,
+                self.collidable_norms,
+            )
             if collision:
                 return True
         return False
@@ -1493,10 +1591,13 @@ class Simulator(gym.Env):
                     same_tile_obj = [
                         o
                         for o in self.objects
-                        if tuple(self.get_grid_coords(o.pos)) == (obj_i, obj_j) and o != obj
+                        if tuple(self.get_grid_coords(o.pos)) == (obj_i, obj_j)
+                        and o != obj
                     ]
 
-                    obj.step_duckiebot(delta_time, self.closest_curve_point, same_tile_obj)
+                    obj.step_duckiebot(
+                        delta_time, self.closest_curve_point, same_tile_obj
+                    )
             else:
                 # print("stepping all objects")
                 obj.step(delta_time)
@@ -1556,7 +1657,6 @@ class Simulator(gym.Env):
         return geometry.SE2_from_translation_angle(np.array(cp), angle)
 
     def weird_from_cartesian(self, q: SE2value) -> Tuple[list, float]:
-
         cp, angle = geometry.translation_angle_from_SE2(q)
 
         gx = cp[0]
@@ -1579,12 +1679,15 @@ class Simulator(gym.Env):
         except NotInLane:
             reward = 40 * col_penalty
         else:
-
             # Compute the reward
-            reward = +1.0 * speed * lp.dot_dir + -10 * np.abs(lp.dist) + +40 * col_penalty
+            reward = (
+                +1.0 * speed * lp.dot_dir + -10 * np.abs(lp.dist) + +40 * col_penalty
+            )
         return reward
 
-    def step(self, action: np.ndarray) -> tuple[np.ndarray, SupportsFloat, bool, bool, dict[str, Any]]:
+    def step(
+        self, action: np.ndarray
+    ) -> tuple[np.ndarray, SupportsFloat, bool, bool, dict[str, Any]]:
         action = np.clip(action, -1, 1)
         # Actions could be a Python list
         action = np.array(action)
@@ -1610,7 +1713,10 @@ class Simulator(gym.Env):
             done = True
         # If the maximum time step count is reached
         elif self.step_count >= self.max_steps:
-            msg = "Stopping the simulator because we reached max_steps = %s" % self.max_steps
+            msg = (
+                "Stopping the simulator because we reached max_steps = %s"
+                % self.max_steps
+            )
             # logger.info(msg)
             done = True
             reward = 0
@@ -1620,7 +1726,9 @@ class Simulator(gym.Env):
             reward = self.compute_reward(self.cur_pos, self.cur_angle, self.robot_speed)
             msg = ""
             done_code = "in-progress"
-        return DoneRewardInfo(done=done, done_why=msg, reward=reward, done_code=done_code)
+        return DoneRewardInfo(
+            done=done, done_why=msg, reward=reward, done_code=done_code
+        )
 
     def _render_img(
         self,
@@ -1752,13 +1860,19 @@ class Simulator(gym.Env):
                 specular = [0.0, 0.0, 0.0, 1.0]
                 spot_direction = [0.0, -1.0, 0.0]
                 logger.debug(
-                    li=li, li_pos=li_pos, ambient=ambient, diffuse=diffuse, spot_direction=spot_direction
+                    li=li,
+                    li_pos=li_pos,
+                    ambient=ambient,
+                    diffuse=diffuse,
+                    spot_direction=spot_direction,
                 )
                 gl.glLightfv(li, gl.GL_POSITION, (gl.GLfloat * 4)(*li_pos))
                 gl.glLightfv(li, gl.GL_AMBIENT, (gl.GLfloat * 4)(*ambient))
                 gl.glLightfv(li, gl.GL_DIFFUSE, (gl.GLfloat * 4)(*diffuse))
                 gl.glLightfv(li, gl.GL_SPECULAR, (gl.GLfloat * 4)(*specular))
-                gl.glLightfv(li, gl.GL_SPOT_DIRECTION, (gl.GLfloat * 3)(*spot_direction))
+                gl.glLightfv(
+                    li, gl.GL_SPOT_DIRECTION, (gl.GLfloat * 3)(*spot_direction)
+                )
                 # gl.glLightfv(li, gl.GL_SPOT_EXPONENT, (gl.GLfloat * 1)(64.0))
                 gl.glLightf(li, gl.GL_SPOT_CUTOFF, 60)
 
@@ -1769,7 +1883,6 @@ class Simulator(gym.Env):
 
         # For each grid tile
         for i, j in itertools.product(range(self.grid_width), range(self.grid_height)):
-
             # Get the tile type and angle
             tile = self._get_tile(i, j)
 
@@ -1805,7 +1918,9 @@ class Simulator(gym.Env):
                 # Find curve with largest dotproduct with heading
                 curves = tile["curves"]
                 curve_headings = curves[:, -1, :] - curves[:, 0, :]
-                curve_headings = curve_headings / np.linalg.norm(curve_headings).reshape(1, -1)
+                curve_headings = curve_headings / np.linalg.norm(
+                    curve_headings
+                ).reshape(1, -1)
                 dirVec = get_dir_vec(angle)
                 dot_prods = np.dot(curve_headings, dirVec)
 
@@ -1822,7 +1937,9 @@ class Simulator(gym.Env):
 
         # For each object
         for obj in self.objects:
-            obj.render(draw_bbox=self.draw_bbox, segment=segment, enable_leds=self.enable_leds)
+            obj.render(
+                draw_bbox=self.draw_bbox, segment=segment, enable_leds=self.enable_leds
+            )
 
         # Draw the agent's own bounding box
         if self.draw_bbox:
@@ -1849,13 +1966,30 @@ class Simulator(gym.Env):
         # Resolve the multisampled frame buffer into the final frame buffer
         gl.glBindFramebuffer(gl.GL_READ_FRAMEBUFFER, multi_fbo)
         gl.glBindFramebuffer(gl.GL_DRAW_FRAMEBUFFER, final_fbo)
-        gl.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, gl.GL_COLOR_BUFFER_BIT, gl.GL_LINEAR)
+        gl.glBlitFramebuffer(
+            0,
+            0,
+            width,
+            height,
+            0,
+            0,
+            width,
+            height,
+            gl.GL_COLOR_BUFFER_BIT,
+            gl.GL_LINEAR,
+        )
 
         # Copy the frame buffer contents into a numpy array
         # Note: glReadPixels reads starting from the lower left corner
         gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, final_fbo)
         gl.glReadPixels(
-            0, 0, width, height, gl.GL_RGB, gl.GL_UNSIGNED_BYTE, img_array.ctypes.data_as(POINTER(gl.GLubyte))
+            0,
+            0,
+            width,
+            height,
+            gl.GL_RGB,
+            gl.GL_UNSIGNED_BYTE,
+            img_array.ctypes.data_as(POINTER(gl.GLubyte)),
         )
 
         # Unbind the frame buffer
@@ -2029,7 +2163,11 @@ def _actual_center(pos, angle):
 
 def get_agent_corners(pos, angle):
     agent_corners = agent_boundbox(
-        _actual_center(pos, angle), ROBOT_WIDTH, ROBOT_LENGTH, get_dir_vec(angle), get_right_vec(angle)
+        _actual_center(pos, angle),
+        ROBOT_WIDTH,
+        ROBOT_LENGTH,
+        get_dir_vec(angle),
+        get_right_vec(angle),
     )
     return agent_corners
 

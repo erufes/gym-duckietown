@@ -6,7 +6,7 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecFrameStack
 import gymnasium as gym
-from env import launch_env
+
 from gym.wrappers.resize_observation import ResizeObservation
 import numpy as np
 
@@ -35,7 +35,7 @@ model = TD3(
     tensorboard_log="./runs",
     target_noise_clip=0.5,
     verbose=2,
-    train_freq=32 * 32
+    train_freq=32 * 32,
 )
 
 model.learn(
