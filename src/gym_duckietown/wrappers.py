@@ -1,8 +1,9 @@
 # coding=utf-8
 import cv2
-import gym
+import gymnasium as gym
+from gymnasium.core import Env
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 
 class DiscreteWrapper(gym.ActionWrapper):
@@ -127,14 +128,18 @@ class ResizeWrapper(gym.ObservationWrapper):
     def reset(self):
         obs = gym.ObservationWrapper.reset(self)
         return cv2.resize(
-            obs.swapaxes(0, 2), dsize=(self.resize_w, self.resize_h), interpolation=cv2.INTER_CUBIC
+            obs.swapaxes(0, 2),
+            dsize=(self.resize_w, self.resize_h),
+            interpolation=cv2.INTER_CUBIC,
         ).swapaxes(0, 2)
 
     def step(self, actions):
         obs, reward, done, info = gym.ObservationWrapper.step(self, actions)
         return (
             cv2.resize(
-                obs.swapaxes(0, 2), dsize=(self.resize_w, self.resize_h), interpolation=cv2.INTER_CUBIC
+                obs.swapaxes(0, 2),
+                dsize=(self.resize_w, self.resize_h),
+                interpolation=cv2.INTER_CUBIC,
             ).swapaxes(0, 2),
             reward,
             done,
@@ -173,7 +178,13 @@ class UndistortWrapper(gym.ObservationWrapper):
         self.camera_matrix = np.reshape(camera_matrix, (3, 3))
 
         # distortion parameters - (k1, k2, t1, t2, k3)
-        distortion_coefs = [-0.2, 0.0305, 0.0005859930422629722, -0.0006697840226199427, 0]
+        distortion_coefs = [
+            -0.2,
+            0.0305,
+            0.0005859930422629722,
+            -0.0006697840226199427,
+            0,
+        ]
         self.distortion_coefs = np.reshape(distortion_coefs, (1, 5))
 
         # R - Rectification matrix - stereo cameras only, so identity
@@ -225,3 +236,67 @@ class UndistortWrapper(gym.ObservationWrapper):
             )
 
         return cv2.remap(observation, self.mapx, self.mapy, cv2.INTER_NEAREST)
+
+
+class SegmentLaneWrapper(gym.ObservationWrapper):
+    def __init__(self, env: Env):
+        super().__init__(env)
+
+    def observation(self, observation: np.ndarray) -> np.ndarray:
+        r, g, b = (
+            observation[:, :, 0, :],
+            observation[:, :, 1, :],
+            observation[:, :, 2, :],
+        )
+        mask = (r > 100) & (g > 100) & (b > 150)
+        observation[mask] = [255, 0, 0]
+        return observation
+
+
+class SegmentMiddleLaneWrapper(gym.ObservationWrapper):
+    def __init__(self, env: Env):
+        super().__init__(env)
+
+    def observation(self, observation: np.ndarray) -> np.ndarray:
+        r, g, b = (
+            observation[:, :, 0, :],
+            observation[:, :, 1, :],
+            observation[:, :, 2, :],
+        )
+        mask = (r > 150) & (g > 150) & (b < 100)
+        observation[mask] = [0, 0, 255]
+        return observation
+
+
+class SegmentRemoveExtraInfo(gym.ObservationWrapper):
+    def __init__(self, env: Env):
+        super().__init__(env)
+
+    def observation(self, observation):
+        r, g, b = (
+            observation[:, :, 0, :],
+            observation[:, :, 1, :],
+            observation[:, :, 2, :],
+        )
+        mask = (r != 255) & (g != 255) & (b != 255)
+        observation[mask] = [0, 0, 0]
+        return observation
+
+
+class CropObservation(gym.ObservationWrapper):
+    def __init__(self, env: Env, size: int):
+        super().__init__(env)
+        self._size = size
+
+    def observation(self, observation):
+        return observation[self._size :, :, :, :]
+
+
+# this is needed because at max speed the duckie can't turn anymore
+class MaxSpeedActionWrapper(gym.ActionWrapper):
+    def __init__(self, env):
+        super(MaxSpeedActionWrapper, self).__init__(env)
+
+    def action(self, action):
+        action_ = [action[0] * 0.8, action[1]]
+        return action_
