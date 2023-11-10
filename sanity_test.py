@@ -1,49 +1,88 @@
 # For env register
 import gym_duckietown
 
-from stable_baselines3 import TD3
+from typing import List
+
+from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import CheckpointCallback
+from gymnasium.wrappers.resize_observation import ResizeObservation
+
+from gym_duckietown.wrappers import DiscreteWrapper, CropObservation, SegmentMiddleLaneWrapper, SegmentRemoveExtraInfo, SegmentLaneWrapper, TransposeToConv2d
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import VecFrameStack
-import gymnasium
-from gymnasium.wrappers.frame_stack import FrameStack
+from stable_baselines3.common.vec_env.vec_frame_stack import VecFrameStack
 
-import numpy as np
 
-MODEL_PREFIX = "td3"
-SEED = 123
+import multiprocessing
 
-ckpt_callback = CheckpointCallback(
+from .custom_net import CustomCNN
+
+MODEL_PREFIX = "dqn_customnet_stack_sm"
+SEED = 2**30 + 8394
+THREAD_COUNT = 4
+
+def wrap(env):
+    env = DiscreteWrapper(env)
+    env = segment(env)
+    return env
+
+def segment(env):
+    env = CropObservation(env, 120)
+    env = SegmentLaneWrapper(env)
+    env = SegmentMiddleLaneWrapper(env)
+    env = SegmentRemoveExtraInfo(env)
+    env = ResizeObservation(env, (40, 80))
+    return env
+
+policy_kwargs = dict(
+    features_extractor_class=CustomCNN,
+    features_extractor_kwargs=dict(features_dim=3),
+)
+
+def train(id):
+    print(f"Running train on process {id}")
+    env = make_vec_env("Duckietown-udem1-v0", n_envs=1, wrapper_class=wrap, seed=SEED + 100 *id)
+    env = VecFrameStack(env, 5)
+
+    model = DQN(
+        policy="CnnPolicy",
+        batch_size=32,
+        env=env,
+        gamma=0.99,
+        learning_rate=0.00005,
+        buffer_size=50000,
+        tensorboard_log="./runs",
+        learning_starts=10000,
+        seed=SEED,
+        policy_kwargs=policy_kwargs,
+        verbose=2,
+        optimize_memory_usage=True,
+        replay_buffer_kwargs={"handle_timeout_termination": False}
+    )
+
+    ckpt_callback = CheckpointCallback(
     save_freq=50_000,
     save_path="./checkpoints/",
-    name_prefix=f"{MODEL_PREFIX}_ckpt",
+    name_prefix=f"{MODEL_PREFIX}_{id}_ckpt",
     save_replay_buffer=True,
     save_vecnormalize=True,
-)
+    )
 
-# env = VecFrameStack(make_vec_env(launch_env, 1), 4)
-env = gymnasium.make("Duckietown-udem1-v0")
+    model.learn(
+        total_timesteps=500_000,
+        callback=ckpt_callback,
+        progress_bar=True,
+        tb_log_name=f"{MODEL_PREFIX}_{id}",
 
-env = FrameStack(env, 4)
-exit(1)
-model = TD3(
-    policy="CnnPolicy",
-    env=env,
-    batch_size=32,
-    seed=SEED,
-    tau=0.005,
-    target_policy_noise=0.2,
-    buffer_size=10_000,
-    tensorboard_log="./runs",
-    target_noise_clip=0.5,
-    verbose=2,
-    train_freq=32 * 32,
-)
+    )
+    model.save(f"{MODEL_PREFIX}_{id}_duck")
+    print(f"Thread {id} done.")
 
-model.learn(
-    total_timesteps=1_000_000,
-    callback=ckpt_callback,
-    progress_bar=True,
-    tb_log_name=f"{MODEL_PREFIX}",
-)
-model.save(f"{MODEL_PREFIX}_duck")
+procs: List[multiprocessing.Process] = []
+for i in range(1, THREAD_COUNT+1):
+    procs.append(multiprocessing.Process(target=train, args=[i]))
+
+for p in procs:
+    p.start()
+
+for p in procs:
+    p.join()
