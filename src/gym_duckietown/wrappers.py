@@ -244,9 +244,9 @@ class SegmentLaneWrapper(gym.ObservationWrapper):
 
     def observation(self, observation: np.ndarray) -> np.ndarray:
         r, g, b = (
-            observation[:, :, 0, :],
-            observation[:, :, 1, :],
-            observation[:, :, 2, :],
+            observation[:, :, 0],
+            observation[:, :, 1],
+            observation[:, :, 2],
         )
         mask = (r > 100) & (g > 100) & (b > 150)
         observation[mask] = [255, 0, 0]
@@ -259,11 +259,11 @@ class SegmentMiddleLaneWrapper(gym.ObservationWrapper):
 
     def observation(self, observation: np.ndarray) -> np.ndarray:
         r, g, b = (
-            observation[:, :, 0, :],
-            observation[:, :, 1, :],
-            observation[:, :, 2, :],
+            observation[:, :, 0],
+            observation[:, :, 1],
+            observation[:, :, 2],
         )
-        mask = (r > 150) & (g > 150) & (b < 100)
+        mask = (r > 150) & (g > 130) & (b < 100)
         observation[mask] = [0, 0, 255]
         return observation
 
@@ -274,9 +274,9 @@ class SegmentRemoveExtraInfo(gym.ObservationWrapper):
 
     def observation(self, observation):
         r, g, b = (
-            observation[:, :, 0, :],
-            observation[:, :, 1, :],
-            observation[:, :, 2, :],
+            observation[:, :, 0],
+            observation[:, :, 1],
+            observation[:, :, 2],
         )
         mask = (r != 255) & (g != 255) & (b != 255)
         observation[mask] = [0, 0, 0]
@@ -289,7 +289,7 @@ class CropObservation(gym.ObservationWrapper):
         self._size = size
 
     def observation(self, observation):
-        return observation[self._size :, :, :, :]
+        return observation[self._size:,:,:]
 
 
 # this is needed because at max speed the duckie can't turn anymore
@@ -300,3 +300,10 @@ class MaxSpeedActionWrapper(gym.ActionWrapper):
     def action(self, action):
         action_ = [action[0] * 0.8, action[1]]
         return action_
+
+class TransposeToConv2d(gym.ObservationWrapper):
+    def __init__(self, env: Env):
+        super().__init__(env)
+    
+    def observation(self, observation: np.ndarray) -> np.ndarray:
+        return observation.transpose(0, 3, 1, 2)
