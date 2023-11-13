@@ -520,7 +520,6 @@ class Simulator(gym.Env):
             light_pos = self.randomization_settings["light_pos"]
         else:
             # light_pos = [-40, 200, 100, 0.0]
-
             light_pos = [0.0, 3.0, 0.0, 1.0]
 
         # DIM = 0.0
@@ -2101,12 +2100,29 @@ class Simulator(gym.Env):
 
         # Display position/state information
         if mode != "free_cam":
+            fmt_last_discrete_action = None
+            if math.isclose(self.last_action[0], 0.04) and math.isclose(
+                self.last_action[1], 0.4
+            ):
+                fmt_last_discrete_action = "left"
+            elif math.isclose(self.last_action[0], 0.4) and math.isclose(
+                self.last_action[1], 0.04
+            ):
+                fmt_last_discrete_action = "right"
+            elif math.isclose(self.last_action[0], 0.3) and math.isclose(
+                self.last_action[1], 0.3
+            ):
+                fmt_last_discrete_action = "forward"
+            else:
+                fmt_last_discrete_action = (
+                    f"{self.last_action[0]:.2f} {self.last_action[1]:.2f}"
+                )
             x, y, z = self.cur_pos
             self.text_label.text = (
                 f"pos: ({x:.2f}, {y:.2f}, {z:.2f}), angle: "
                 f"{np.rad2deg(self.cur_angle):.1f} deg, steps: {self.step_count}, "
-                f"speed: {self.speed:.2f} m/s"
-                f"action: {self.last_action[0]:.2f}, {self.last_action[1]:.2f}"
+                f"speed: {self.speed:.2f} m/s\n"
+                f"action: {fmt_last_discrete_action}"
             )
             self.text_label.draw()
 
