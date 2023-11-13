@@ -291,7 +291,7 @@ class SegmentMiddleLaneWrapper(gym.ObservationWrapper):
             observation[:, :, 1],
             observation[:, :, 2],
         )
-        mask = (r > 150) & (g > 130) & (b < 100)
+        mask = (r > 150) & (g > 150) & (b < 140)
         observation[mask] = [0, 0, 255]
         return observation
 
@@ -317,7 +317,7 @@ class CropObservation(gym.ObservationWrapper):
         self._size = size
 
     def observation(self, observation):
-        return observation[self._size :, :, :]
+        return observation[:, -self._size :, :]
 
 
 # this is needed because at max speed the duckie can't turn anymore
