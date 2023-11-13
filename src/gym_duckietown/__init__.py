@@ -39,6 +39,13 @@ def reg_map_env(map_name0: str, map_file: str):
         kwargs={"map_name": map_file},
     )
 
+    register(
+        id=f"{gym_id}_d",
+        entry_point="gym_duckietown.envs:DuckietownDifferentialEnv",
+        reward_threshold=400.0,
+        kwargs={"map_name": map_file},
+    )
+
 
 for map_name, filename in list_maps2().items():
     # Register a gym environment for each map file available

@@ -1963,6 +1963,7 @@ class Simulator(gym.Env):
                 f"pos: ({x:.2f}, {y:.2f}, {z:.2f}), angle: "
                 f"{np.rad2deg(self.cur_angle):.1f} deg, steps: {self.step_count}, "
                 f"speed: {self.speed:.2f} m/s"
+                f"action: {self.last_action[0]:.2f}, {self.last_action[1]:.2f}"
             )
             self.text_label.draw()
 
