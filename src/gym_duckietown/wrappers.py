@@ -34,6 +34,34 @@ class DiscreteWrapper(gym.ActionWrapper):
         raise NotImplementedError()
 
 
+class DiscreteDifferentialWrapper(gym.ActionWrapper):
+    """
+    Duckietown environment with discrete actions (left, right, forward)
+    instead of continuous control
+    """
+
+    def __init__(self, env):
+        gym.ActionWrapper.__init__(self, env)
+        self.action_space = spaces.Discrete(3)
+
+    def action(self, action):
+        # Turn left
+        if action == 0:
+            vels = [0.04, 0.4]
+        # Turn right
+        elif action == 1:
+            vels = [0.4, 0.04]
+        # Go forward
+        elif action == 2:
+            vels = [0.3, 0.3]
+        else:
+            assert False, "unknown action"
+        return np.array(vels)
+
+    def reverse_action(self, action):
+        raise NotImplementedError()
+
+
 class SteeringToWheelVelWrapper(gym.ActionWrapper):
     """
     Converts policy that was trained with [velocity|heading] actions to
@@ -289,7 +317,7 @@ class CropObservation(gym.ObservationWrapper):
         self._size = size
 
     def observation(self, observation):
-        return observation[self._size:,:,:]
+        return observation[self._size :, :, :]
 
 
 # this is needed because at max speed the duckie can't turn anymore
@@ -301,9 +329,10 @@ class MaxSpeedActionWrapper(gym.ActionWrapper):
         action_ = [action[0] * 0.8, action[1]]
         return action_
 
+
 class TransposeToConv2d(gym.ObservationWrapper):
     def __init__(self, env: Env):
         super().__init__(env)
-    
+
     def observation(self, observation: np.ndarray) -> np.ndarray:
         return observation.transpose(0, 3, 1, 2)

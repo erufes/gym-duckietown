@@ -74,6 +74,24 @@ class DuckietownEnv(Simulator):
         return obs, reward, done, info
 
 
+class DuckietownDifferentialEnv(Simulator):
+    """
+    Wrapper to control the simulator using differential drive motor velocities
+    """
+
+    def __init__(self, gain=1.0, trim=0.0, radius=0.0318, k=27.0, limit=1.0, **kwargs):
+        Simulator.__init__(self, **kwargs)
+        logger.info("using DuckietownEnv")
+
+        self.action_space = spaces.Box(
+            low=np.array([-1, -1]), high=np.array([1, 1]), dtype=np.float32
+        )
+
+    def step(self, action):
+        obs, reward, done, trunc, info = Simulator.step(self, action)
+        return obs, reward, done, trunc, info
+
+
 class DuckietownLF(DuckietownEnv):
     """
     Environment for the Duckietown lane following task with
