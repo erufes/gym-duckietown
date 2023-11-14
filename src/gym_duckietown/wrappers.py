@@ -276,7 +276,7 @@ class SegmentLaneWrapper(gym.ObservationWrapper):
             observation[:, :, 1],
             observation[:, :, 2],
         )
-        mask = (r > 100) & (g > 100) & (b > 150)
+        mask = (r > 150) & (g > 150) & (b > 150)
         observation[mask] = [255, 0, 0]
         return observation
 
