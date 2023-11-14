@@ -1720,7 +1720,7 @@ class Simulator(gym.Env):
             self.update_physics(action)
 
         # Generate the current camera image
-        obs = self.render_obs().transpose(1, 0, 2)
+        obs = self.render_obs()
         misc = self.get_agent_info()
 
         d = self._compute_done_reward()

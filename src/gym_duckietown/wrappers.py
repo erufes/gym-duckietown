@@ -320,6 +320,21 @@ class CropObservation(gym.ObservationWrapper):
         return observation[:, -self._size :, :]
 
 
+class TransposeToConv2d(gym.ObservationWrapper):
+    def __init__(self, env: Env):
+        super().__init__(env)
+        original_space = self.observation_space.shape
+        self.observation_space = spaces.Box(
+            low=0,
+            high=255,
+            shape=(original_space[2], original_space[0], original_space[1]),
+            dtype=np.uint8,
+        )
+
+    def observation(self, observation: np.ndarray) -> np.ndarray:
+        return observation.transpose(2, 0, 1)
+
+
 # this is needed because at max speed the duckie can't turn anymore
 class MaxSpeedActionWrapper(gym.ActionWrapper):
     def __init__(self, env):
@@ -328,11 +343,3 @@ class MaxSpeedActionWrapper(gym.ActionWrapper):
     def action(self, action):
         action_ = [action[0] * 0.8, action[1]]
         return action_
-
-
-class TransposeToConv2d(gym.ObservationWrapper):
-    def __init__(self, env: Env):
-        super().__init__(env)
-
-    def observation(self, observation: np.ndarray) -> np.ndarray:
-        return observation.transpose(0, 3, 1, 2)

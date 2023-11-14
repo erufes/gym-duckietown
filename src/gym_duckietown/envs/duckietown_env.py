@@ -81,7 +81,7 @@ class DuckietownDifferentialEnv(Simulator):
 
     def __init__(self, gain=1.0, trim=0.0, radius=0.0318, k=27.0, limit=1.0, **kwargs):
         Simulator.__init__(self, **kwargs)
-        logger.info("using DuckietownEnv")
+        logger.info("using custom DuckietownEnv")
 
         self.action_space = spaces.Box(
             low=np.array([-1, -1]), high=np.array([1, 1]), dtype=np.float32
