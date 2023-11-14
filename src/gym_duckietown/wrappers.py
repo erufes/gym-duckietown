@@ -55,7 +55,7 @@ class DiscreteDifferentialWrapper(gym.ActionWrapper):
         elif action == 2:
             vels = [0.3, 0.3]
         else:
-            assert False, "unknown action"
+            assert False, f"unknown action {action}"
         return np.array(vels)
 
     def reverse_action(self, action):

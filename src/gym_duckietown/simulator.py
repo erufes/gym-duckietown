@@ -1694,6 +1694,22 @@ class Simulator(gym.Env):
             )
         return reward
 
+    def compute_reward_article(self, pos, angle, speed):
+        # Compute the collision avoidance penalty
+        col_penalty = self.proximity_penalty2(pos, angle)
+
+        # Get the position relative to the right lane tangent
+        try:
+            lp = self.get_lane_pos2(pos, angle)
+        except NotInLane:
+            reward = 400 * col_penalty
+        else:
+            # Compute the reward
+            reward = (
+                +10.0 * speed * lp.dot_dir + -100 * np.abs(lp.dist) + +400 * col_penalty
+            )
+        return reward
+
     def step(
         self, action: np.ndarray
     ) -> tuple[np.ndarray, SupportsFloat, bool, bool, dict[str, Any]]:
@@ -1732,7 +1748,9 @@ class Simulator(gym.Env):
             done_code = "max-steps-reached"
         else:
             done = False
-            reward = self.compute_reward(self.cur_pos, self.cur_angle, self.robot_speed)
+            reward = self.compute_reward_article(
+                self.cur_pos, self.cur_angle, self.robot_speed
+            )
             msg = ""
             done_code = "in-progress"
         return DoneRewardInfo(
