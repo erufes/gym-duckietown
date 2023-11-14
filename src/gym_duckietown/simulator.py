@@ -1726,7 +1726,9 @@ class Simulator(gym.Env):
         d = self._compute_done_reward()
         misc["Simulator"]["msg"] = d.done_why
 
-        return obs, d.reward, d.done, d.done, misc
+        trunc = d.done_code == "max-steps-reached"
+
+        return obs, d.reward, trunc, d.done, misc
 
     def _compute_done_reward(self) -> DoneRewardInfo:
         # If the agent is not in a valid pose (on drivable tiles)
