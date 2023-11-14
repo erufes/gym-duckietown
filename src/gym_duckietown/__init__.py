@@ -43,7 +43,7 @@ def reg_map_env(map_name0: str, map_file: str):
         id=f"{gym_id}_d",
         entry_point="gym_duckietown.envs:DuckietownDifferentialEnv",
         reward_threshold=400.0,
-        kwargs={"map_name": map_file},
+        kwargs={"map_name": map_file, "max_steps": 500},
     )
 
 
