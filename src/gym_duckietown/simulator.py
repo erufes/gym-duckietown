@@ -1698,18 +1698,16 @@ class Simulator(gym.Env):
         return reward
 
     def compute_reward_article(self, pos, angle, speed):
-        # Compute the collision avoidance penalty
-        col_penalty = self.proximity_penalty2(pos, angle)
-
         # Get the position relative to the right lane tangent
         try:
             lp = self.get_lane_pos2(pos, angle)
+            wrong_lane_penalty = -1 if abs(lp.dist) > 0.1 else 0
         except NotInLane:
-            reward = 400 * col_penalty
+            reward = -400
         else:
             # Compute the reward
             reward = (
-                +10.0 * speed * lp.dot_dir + -100 * np.abs(lp.dist) + +400 * col_penalty
+                100.0 * speed * lp.dot_dir + -100 * np.abs(lp.dist) + +400 * wrong_lane_penalty
             )
         return reward
 
