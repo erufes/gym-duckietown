@@ -47,6 +47,21 @@ def reg_map_env(map_name0: str, map_file: str):
     )
 
     register(
+        id=f"{gym_id}_debug",
+        entry_point="gym_duckietown.envs:DuckietownDifferentialEnv",
+        reward_threshold=400.0,
+        kwargs={
+            "map_name": map_file,
+            "max_steps": 99999,
+            "domain_rand": False,
+            "accept_start_angle_deg": 4.0,
+            "color_sky": (0, 0, 0),
+            "color_ground": (0, 0, 0),
+            "enable_physics": False,
+        },
+    )
+
+    register(
         id=f"{gym_id}_pietroluongo_train",
         entry_point="gym_duckietown.envs:DuckietownDifferentialEnv",
         reward_threshold=400.0,

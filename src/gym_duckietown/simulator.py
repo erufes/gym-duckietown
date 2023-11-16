@@ -156,6 +156,7 @@ class Simulator(gym.Env):
         color_sky: Sequence[float] = BLUE_SKY,
         style: str = "photos",
         enable_leds: bool = False,
+        enable_physics: bool = True,
     ):
         """
 
@@ -213,6 +214,8 @@ class Simulator(gym.Env):
 
         # Flag to draw the road curve
         self.draw_curve = draw_curve
+
+        self._enable_physics = enable_physics
 
         # Flag to draw bounding boxes
         self.draw_bbox = draw_bbox
@@ -1716,8 +1719,10 @@ class Simulator(gym.Env):
         action = np.clip(action, -1, 1)
         # Actions could be a Python list
         action = np.array(action)
-        for _ in range(self.frame_skip):
-            self.update_physics(action)
+
+        if self._enable_physics:
+            for _ in range(self.frame_skip):
+                self.update_physics(action)
 
         # Generate the current camera image
         obs = self.render_obs()
@@ -2051,6 +2056,40 @@ class Simulator(gym.Env):
             observation = self.camera_model.distort(observation)
 
         return observation
+
+    def get_debug_reward_info(self):
+        pos = self.cur_pos
+        angle = self.cur_angle
+        speed = self.speed
+        # Compute the collision avoidance penalty
+        # col_penalty = self.proximity_penalty2(pos, angle)
+        col_penalty = 1
+        extra = "ok"
+
+        # Get the position relative to the right lane tangent
+        try:
+            lp = self.get_lane_pos2(pos, angle)
+            col_penalty = -1 if abs(lp.dist) > 0.1 else 0
+        except NotInLane:
+            extra = "Not in lane"
+            lp = None
+            reward = 400 * col_penalty
+        else:
+            # Compute the reward
+            reward = (
+                +100.0 * speed * lp.dot_dir
+                + -100 * np.abs(lp.dist)
+                + +400 * col_penalty
+            )
+        return (
+            pos,
+            lp.dot_dir if lp is not None else 0,
+            speed,
+            col_penalty,
+            reward,
+            lp.dist if lp is not None else 0,
+            extra,
+        )
 
     def render(self, mode: str = "human", close: bool = False, segment: bool = False):
         """

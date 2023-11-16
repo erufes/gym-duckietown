@@ -91,6 +91,21 @@ class DuckietownDifferentialEnv(Simulator):
         obs, reward, done, trunc, info = Simulator.step(self, action)
         return obs, reward, done, trunc, info
 
+    def get_debug_info(self):
+        return self.get_debug_reward_info()
+
+    def force_move(self, x, y):
+        ang = self.cur_angle
+        self.cur_pos += np.array(
+            [x * np.cos(ang) - y * np.sin(ang), 0, x * -np.sin(ang) - y * np.cos(ang)]
+        )
+
+    def force_rotate(self, angle):
+        self.cur_angle += angle
+
+    def force_speed(self, speed_delta):
+        self.speed += speed_delta
+
 
 class DuckietownLF(DuckietownEnv):
     """
